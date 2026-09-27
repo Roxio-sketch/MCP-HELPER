@@ -1,0 +1,650 @@
+# Руководство по интеграции с AI-инструментами
+
+**[English](../en/AI-TOOLS.md)** &bull; **[简体中文](../zhs/AI-TOOLS.md)** &bull; **[繁體中文](../zht/AI-TOOLS.md)** &bull; **[日本語](../ja/AI-TOOLS.md)** &bull; **[한국어](../ko/AI-TOOLS.md)** &bull; **[Français](../fr/AI-TOOLS.md)** &bull; **[Español](../es/AI-TOOLS.md)** &bull; **Русский**
+
+> **🤖 Для ИИ-агентов**: Если пользователь просит вас подключиться к Minecraft, добавьте эту конфигурацию MCP-сервера и используйте более 35 инструментов, перечисленных в конце этого руководства:
+>
+> ```json
+> {
+>   "mcpServers": {
+>     "minecraft-mcp": {
+>       "type": "local",
+>       "command": ["npx", "-y", "minecraft-mod-mcp"]
+>     }
+>   }
+> }
+> ```
+>
+> **Для пользователей**: Просто вставьте URL этой страницы вашему ИИ-агенту, и он настроится автоматически. Ручная настройка не требуется.
+
+<!-- bridge-fix -->
+> ⚠️ **Important / 重要 / Важно**: Connect via the **stdio bridge** `npx -y minecraft-mod-mcp` (MCP `type: "local"`),
+> **not** by pointing `"type":"sse"` at `http://localhost:9876/api/events`. The mod's `/api/events` is a plain
+> debug SSE stream and is **not** an MCP transport — an SSE config will fail to list or call any tool.
+> The bridge is the only component that speaks MCP and auto-discovers which port the game is on (9876→9000).
+> See the [English guide](../en/AI-TOOLS.md) for the authoritative, up-to-date instructions.
+
+---
+
+## Быстрая настройка
+
+Большинство AI-инструментов используют одинаковую конфигурацию MCP на основе SSE. Добавьте это в файл конфигурации вашего инструмента:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+Расположение файлов конфигурации:
+
+| Инструмент | Файл конфигурации |
+|------|-------------|
+| Claude Code, OpenCode, CodeBuddy, WorkBuddy | `.mcp.json` в корне проекта |
+| Cursor | `.cursor/mcp.json` в корне проекта |
+| Cline, Roo Code, Kilo Code | VS Code `settings.json` |
+| Claude Desktop | `claude_desktop_config.json` (пути для ОС см. ниже) |
+| Другие | См. разделы ниже |
+
+> См. [инструкции по каждому инструменту](#инструменты-для-агентов-программирования) ниже для точных путей, настройки через интерфейс и специфичных форматов.
+
+---
+
+## HTTP-эндпоинты Minecraft Mod MCP
+
+Сервер Minecraft Mod MCP предоставляет следующие HTTP-эндпоинты (порт по умолчанию: **9876**):
+
+| Эндпоинт | Метод | Описание |
+|----------|--------|-------------|
+| `/api/status` | GET | Проверка работоспособности |
+| `/api/cmd` | POST | Диспетчеризация JSON-RPC команд (тело: `{"cmd":"...", "params":{...}}`) |
+| `/api/screenshot` | GET | Сделать скриншот, возвращает PNG в base64 |
+| `/api/events` | GET | Поток SSE (Server-Sent Events) для истории вызовов в реальном времени |
+| `/api/calls` | GET | Возвращает последние 50 событий вызовов в виде JSON-массива |
+
+> **Необходимые условия**: Убедитесь, что демон Minecraft Mod MCP запущен и клиент Minecraft с модом MCP подключён. Выполните `npx -y minecraft-mod-mcp` (the bridge auto-discovers the game) or launch a client via the `launch_minecraft` tool.
+
+---
+
+## Методы интеграции
+
+Большинство AI-инструментов для программирования поддерживают **Model Context Protocol (MCP)** для подключения к внешним серверам. К серверу Minecraft Mod MCP можно подключиться через:
+
+- **MCP (stdio bridge — required)**: run `npx -y minecraft-mod-mcp`. This is the only MCP-compatible transport; the bridge auto-discovers the game's port (9876→9000). The mod's `/api/events` is not an MCP transport.
+- **HTTP REST API**: Отправляйте POST-запросы напрямую на `http://localhost:9876/api/cmd`
+
+В разделах ниже приведены инструкции по настройке для конкретных инструментов.
+
+---
+
+## Инструменты для агентов программирования
+
+### Claude Code
+
+Терминальный AI-ассистент для программирования от Anthropic.
+
+**Настройка**: Создайте или отредактируйте `.mcp.json` в корне проекта:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+Либо используйте `claude mcp add minecraft-mod-mcp -- npx -y minecraft-mod-mcp`.
+
+### Claude Desktop / Claude for IDE
+
+Настольное приложение и версии плагинов для VS Code/JetBrains IDE.
+
+**Настройка**: Отредактируйте `claude_desktop_config.json`:
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+Для **Claude for IDE** (VS Code / JetBrains) настройка такая же — используйте файл `.mcp.json` в корне проекта.
+
+### OpenCode
+
+Терминальный агент программирования с открытым исходным кодом.
+
+**Настройка**: Создайте `.opencode.json` в корне проекта или отредактируйте `~/.config/opencode/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Cursor
+
+AI-ориентированный редактор кода с поддержкой пользовательских моделей.
+
+**Настройка**: Создайте `.cursor/mcp.json` в корне проекта:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "command": "npx",
+      "args": ["-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+Или через интерфейс: **Cursor Settings → MCP → Add new MCP Server**, type **stdio**, command `npx -y minecraft-mod-mcp`.
+
+### Cline
+
+Расширение AI для программирования в VS Code.
+
+**Настройка**: Откройте настройки VS Code (`Ctrl+,`), найдите `cline.mcpServers` или добавьте в `settings.json`:
+
+```json
+{
+  "cline.mcpServers": {
+    "minecraft-mcp": {
+      "command": "npx",
+      "args": ["-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Roo Code
+
+Интеллектуальное расширение VS Code для написания и рефакторинга кода.
+
+**Настройка**: Добавьте в `settings.json` VS Code (тот же формат, что и для Cline):
+
+```json
+{
+  "roo.mcpServers": {
+    "minecraft-mcp": {
+      "command": "npx",
+      "args": ["-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Kilo Code
+
+Эффективный плагин VS Code для генерации кода и управления проектами.
+
+**Настройка**: Добавьте в `settings.json` VS Code:
+
+```json
+{
+  "kilo.mcpServers": {
+    "minecraft-mcp": {
+      "command": "npx",
+      "args": ["-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### GitHub Copilot
+
+AI-парный программист от GitHub в VS Code.
+
+**Настройка**: Создайте `.github/copilot-instructions.md` в рабочем пространстве или настройте MCP через настройки VS Code:
+
+```json
+{
+  "github.copilot.mcpServers": {
+    "minecraft-mcp": {
+      "command": "npx",
+      "args": ["-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### GitHub Copilot CLI
+
+GitHub Copilot для командной строки.
+
+**Настройка**: Установите переменные окружения или используйте `gh copilot config`:
+
+```bash
+# GitHub Copilot CLI does not load MCP servers from an env var.
+# Use a stdio-capable MCP host instead, e.g. Claude Code:
+#   claude mcp add minecraft-mod-mcp -- npx -y minecraft-mod-mcp
+```
+
+### CodeBuddy / WorkBuddy
+
+AI-инструмент для полнофункционального интеллектуального программирования.
+
+**Настройка**: Создайте `mcp.json` в корне проекта или рабочем пространстве:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "command": "npx",
+      "args": ["-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### TRAE
+
+AI-редактор, способный самостоятельно выполнять различные задачи разработки.
+
+**Настройка**: Перейдите в **Settings → MCP Servers → Add Server**:
+
+- **Name**: `minecraft-mcp`
+- **Transport**: stdio
+- **URL**: `npx -y minecraft-mod-mcp`
+
+### ZCode
+
+Объединяет мощные AI-агенты с существующими инструментальными цепочками.
+
+**Настройка**: Отредактируйте `~/.zcode/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Lingma
+
+Интеллектуальный ассистент для программирования.
+
+**Настройка**: Перейдите в **Settings → MCP → Add Server**:
+
+- **Name**: `minecraft-mcp`
+- **Transport**: stdio
+- **URL**: `npx -y minecraft-mod-mcp`
+
+### Qoder
+
+Платформа агентного программирования для реального программного обеспечения.
+
+**Настройка**: Отредактируйте `~/.qoder/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Droid
+
+Терминальный AI-агент для программирования корпоративного уровня для сквозных рабочих процессов.
+
+**Настройка**: Отредактируйте `~/.droid/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Crush
+
+Терминальный AI-инструмент для программирования с поддержкой интерфейсов CLI и TUI.
+
+**Настройка**: Отредактируйте `~/.crush/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Goose
+
+AI-агент с поддержкой локального выполнения и автоматизированных инженерных задач.
+
+**Настройка**: Отредактируйте `~/.config/goose/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Deep Code
+
+Ассистент для программирования на базе DeepSeek.
+
+**Настройка**: Отредактируйте `~/.deepcode/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Reasonix
+
+AI-инструмент для программирования, ориентированный на рассуждения.
+
+**Настройка**: Отредактируйте `~/.reasonix/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Langcli
+
+AI-ассистент для программирования на основе CLI.
+
+**Настройка**: Отредактируйте `~/.langcli/config.yaml`:
+
+```yaml
+mcp_servers:
+  minecraft-mcp:
+    type: stdio
+    command: ["npx", "-y", "minecraft-mod-mcp"]
+```
+
+### Oh My Pi
+
+Универсальная платформа AI-агентов.
+
+**Настройка**: Отредактируйте `~/.oh-my-pi/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Pi
+
+Лёгкий AI-компаньон для программирования.
+
+**Настройка**: Отредактируйте `~/.pi/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+---
+
+## Инструменты общего назначения для агентов
+
+### OpenClaw
+
+AI-ассистент с открытым исходным кодом, работающий локально с расширяемостью через Skills.
+
+**Настройка**: Отредактируйте `openclaw.json` в рабочем пространстве:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### Cherry Studio
+
+AI-приложение IDE с поддержкой интеграции множества моделей.
+
+**Настройка**: Перейдите в **Settings → MCP Servers → Add**:
+
+- **Name**: `minecraft-mcp`
+- **Transport**: stdio
+- **URL**: `npx -y minecraft-mod-mcp`
+
+### Hermes Agent
+
+Саморазвивающийся AI-агент с открытым исходным кодом и постоянной памятью.
+
+**Настройка**: Отредактируйте `~/.hermes/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### AstrBot
+
+Фреймворк для ботов на базе AI.
+
+**Настройка**: Отредактируйте `astrbot_config.json`:
+
+```json
+{
+  "mcp_servers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+### nanobot
+
+Лёгкий AI-агент для различных задач.
+
+**Настройка**: Отредактируйте `~/.nanobot/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "minecraft-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "minecraft-mod-mcp"]
+    }
+  }
+}
+```
+
+---
+
+## Прямой доступ через HTTP REST API
+
+Для инструментов, которые не поддерживают протокол MCP нативно, вы можете взаимодействовать с сервером Minecraft Mod MCP напрямую через его HTTP REST API:
+
+```bash
+# Проверка работоспособности
+curl http://localhost:9876/api/status
+
+# Выполнение команды
+curl -X POST http://localhost:9876/api/cmd \
+  -H "Content-Type: application/json" \
+  -d '{"cmd":"screenshot","params":{}}'
+
+# Сделать скриншот
+curl http://localhost:9876/api/screenshot
+
+# Подписка на события (поток SSE)
+curl http://localhost:9876/api/events
+```
+
+### Основные команды
+
+| Команда | Описание |
+|---------|-------------|
+| `screenshot` | Сделать скриншот окна Minecraft |
+| `screenshot_to_file` | Сделать скриншот и сохранить в локальный файл (`{"cmd":"screenshot_to_file","params":{"path":"/tmp/mc.png"}}`) |
+| `click` | Кликнуть по координатам (x, y) |
+| `press_key` | Нажать клавишу клавиатуры |
+| `type_text` | Ввести текстовую строку |
+| `scroll` | Выполнить прокрутку колёсиком мыши |
+| `execute_command` | Выполнить команду Minecraft через слэш |
+| `get_player_info` | Получить позицию и состояние игрока |
+| `get_world_info` | Получить информацию о мире |
+
+---
+
+## Интеграция визуального распознавания
+
+Вы можете использовать Minecraft Mod MCP вместе с **MCP-серверами с поддержкой компьютерного зрения**, чтобы AI-агенты могли *видеть и понимать*, что происходит в игре — читать текст интерфейса, диагностировать ошибки, анализировать расположение элементов и многое другое.
+
+### Как это работает
+
+1. Minecraft Mod MCP делает скриншот и сохраняет его в локальный файл через `screenshot_to_file`
+2. Vision MCP-сервер читает этот файл и анализирует его
+3. AI-агент координирует оба сервера — скриншот → анализ → действие
+
+```mermaid
+flowchart TD
+    A["AI Agent"]
+    A --> B["Minecraft Mod MCP<br/>screenshot_to_file<br/>→ /tmp/mc_screen.png"]
+    A --> C["Vision MCP<br/>analyze screenshot<br/>→ report what it sees"]
+    A --> D["Minecraft Mod MCP<br/>click x=400,y=300<br/>→ enters game"]
+```
+
+### GLM Vision MCP Server
+
+[GLM Vision MCP Server](https://docs.bigmodel.cn/cn/coding-plan/mcp/vision-mcp-server) (`@z_ai/mcp-server`) — это локальный MCP-сервер на базе GLM-4.6V, предоставляющий:
+
+| Инструмент | Применение |
+|------|----------|
+| `ui_to_artifact` | Преобразование скриншотов интерфейса в код, промпты или спецификации дизайна |
+| `extract_text_from_screenshot` | OCR текста из игрового интерфейса (чат, таблички, меню) |
+| `diagnose_error_screenshot` | Анализ диалогов ошибок и стек-трейсов в игре |
+| `understand_technical_diagram` | Чтение редстоун-схем и чертежей |
+| `analyze_data_visualization` | Чтение игровой статистики и панелей показателей |
+| `image_analysis` | Общее визуальное понимание игровых сцен |
+| `ui_diff_check` | Сравнение скриншотов до/после |
+
+**Установка** (требуется Node.js >= 18):
+
+```bash
+# Claude Code
+claude mcp add -s user zai-mcp-server --env Z_AI_API_KEY=<your_zhipu_api_key> -- npx -y "@z_ai/mcp-server"
+
+# Manual config (Cline, Roo Code, Kilo Code, etc.)
+{
+  "mcpServers": {
+    "zai-mcp-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@z_ai/mcp-server"],
+      "env": {
+        "Z_AI_API_KEY": "<your_zhipu_api_key>",
+        "Z_AI_MODE": "ZHIPU"
+      }
+    }
+  }
+}
+```
+
+> **Примечание**: Vision MCP читает файлы с диска, поэтому всегда используйте `screenshot_to_file` (не `screenshot`) перед вызовом инструментов зрения. Ваш ИИ-агент может указать путь к файлу при вызове `screenshot_to_file`.
+
+### Пример рабочего процесса
+
+1. Попросите вашего ИИ-агента: *"Сделай скриншот Minecraft, сохрани его в `/tmp/mc.png`, затем проанализируй, что на экране, и скажи, какую кнопку нажать, чтобы начать новую игру."*
+2. Агент вызывает `minecraft-mcp` → `screenshot_to_file` → файл сохранён
+3. Агент вызывает `zai-mcp-server` → `extract_text_from_screenshot` → читает текст интерфейса
+4. Агент сообщает, что он видит, и что делать дальше
+
+### Другие инструменты зрения
+
+| Инструмент | Описание |
+|------|------|
+| [Claude built-in vision](https://docs.anthropic.com/en/docs/claude/vision) | Claude нативно понимает изображения — просто вставьте или укажите файл скриншота |
+| [GPT-4o / GPT-4V](https://platform.openai.com/docs/guides/vision) | Модели зрения OpenAI, доступные через любой совместимый с OpenAI клиент |
+| [Gemini Vision](https://ai.google.dev/gemini-api/docs/vision) | API зрения Google, используемый в инструментах, совместимых с Gemini |
+| [Qwen-VL](https://github.com/QwenLM/Qwen-VL) | Открытая модель «зрение-язык» для самостоятельного хостинга |
+
+> Любой LLM или MCP-сервер с поддержкой зрения можно использовать в том же конвейере — главное, использовать `screenshot_to_file`, чтобы сначала сохранить скриншот на диск.
+
+---
+
+## Устранение неполадок
+
+1. **Connection refused**: Убедитесь, что демон MCP запущен (`just daemon`) и клиент Minecraft запущен.
+2. **SSE timeout**: Некоторые инструменты могут отключаться от SSE после периода бездействия. Перезапустите инструмент или SSE-соединение.
+3. **Port conflict**: Если порт 9876 занят, настройте другой порт через переменную окружения `MCP_PORT` или системное свойство `mcp.server.port`.
+4. **Firewall**: Убедитесь, что ваш брандмауэр разрешает подключения к `localhost:9876`.
+
+> По вопросам и проблемам открывайте issue в [GitHub-репозитории](https://github.com/langyo/minecraft-mod-mcp).

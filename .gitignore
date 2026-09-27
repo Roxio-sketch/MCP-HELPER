@@ -1,0 +1,82 @@
+.gradle/
+.jdks/
+.kotlin/
+build/
+out/
+.maven-local/
+neoform-cache/
+run/
+release-jars/
+
+*.class
+*.hprof
+*.log
+
+__pycache__/
+screenshots/
+test_results.json
+build-report.json
+build-error.log
+gradle.properties
+rpc_*
+.cache/
+target/
+.bf
+.build_done
+.build_flag
+.minecraft/
+tmp_fbo_extract/
+mcp_debug.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+.mcp.json
+.opencode.json
+
+# Misc
+node_modules/
+*.tmp
+*.swp
+*~
+dist/
+
+# MC runtime logs
+logs/
+.mixin.out/
+
+# Auto-generated TS bindings (ts-rs)
+/packages/launcher/shared/*/bindings/
+/packages/launcher/frontend/src/bindings/
+
+# Root-only junk guards (anchored to repo root)
+# Debug/test screenshots leaked via `git add .`
+/screenshot_*.png
+# Any image committed to the repo root is almost certainly a mistake
+# (logos/icons live under docs/ or packages/.../resources/)
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+/*.bmp
+# Stray PowerShell redirect artifact
+/0
+# Test/build output residues
+/test-mouse-results.json
+test-*-results.json
+
+# Build output tracked by mistake
+/packages/*/bin/
+
+# AI session state (hook status / screenshots)
+.mimosa/

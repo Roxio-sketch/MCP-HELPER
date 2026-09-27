@@ -1,0 +1,24 @@
+plugins { id 'java'; id 'net.minecraftforge.gradle' version '6.0.54' }
+version = '1.0'
+group = 'xyz.langyo'
+base { archivesName = 'MCP-HELPER-1.20.1-forge' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+minecraft { mappings channel: 'official', version: '1.20.1' }
+repositories {
+    maven { url = 'https://maven.minecraftforge.net/' }
+    mavenCentral()
+}
+configurations.configureEach {
+    resolutionStrategy.eachDependency { d ->
+        if (d.requested.group == 'org.apache.logging.log4j' && d.requested.version == '2.11.+') d.useVersion('2.11.2')
+        if (d.requested.group == 'cpw.mods' && d.requested.name == 'modlauncher' && d.requested.version == '10.0.+') d.useVersion('10.0.9')
+        if (d.requested.group == 'net.jodah' && d.requested.name == 'typetools' && d.requested.version == '0.6.+') d.useVersion('0.6.3')
+    }
+}
+dependencies { minecraft 'net.minecraftforge:forge:1.20.1-47.4.0' }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+jar {
+    manifest { attributes 'Automatic-Module': 'xyz.langyo.minecraft.mcp.mod' }
+}
+jar.finalizedBy('reobfJar')
+

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>MCP 调试</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI','Microsoft YaHei',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.hdr{background:#161b22;border-bottom:1px solid #30363d;padding:8px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.hdr h1{font-size:16px;color:#58a6ff}
+.dot{width:10px;height:10px;border-radius:50%;background:#3fb950;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.dot.off{background:#f85149;animation:none}
+.sbar{background:#0d1117;border-bottom:1px solid #30363d;padding:5px 16px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;font-size:11px;color:#8b949e;flex-shrink:0}
+.sitem{font-family:monospace}
+.sitem b{color:#8b949e;font-weight:600}
+.sitem b.good{color:#3fb950}
+.sitem b.bad{color:#f85149}
+.sitem b.on{color:#d29922}
+.main{display:flex;flex:1;overflow:hidden}
+.left{flex:1;display:flex;flex-direction:column;border-right:1px solid #30363d;min-width:0}
+.imgbox{flex:1;overflow:auto;background:#010409;display:flex;align-items:flex-start;justify-content:center;padding:8px}
+.imgbox img{max-width:100%;height:auto;image-rendering:pixelated}
+.vctrl{background:#161b22;padding:6px 12px;display:flex;gap:8px;align-items:center;border-top:1px solid #30363d;flex-shrink:0}
+.vctrl button{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px}
+.vctrl button:hover{background:#30363d}
+.vctrl button.active{background:#238636;border-color:#2ea043;color:#fff}
+.info{color:#8b949e;font-size:11px;font-family:monospace}
+.right{width:480px;display:flex;flex-direction:column;flex-shrink:0}
+.rhdr{background:#161b22;padding:8px 12px;border-bottom:1px solid #30363d;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.rhdr h2{font-size:14px;color:#58a6ff}
+.rhdr span{font-size:11px;color:#8b949e}
+.rhdr button{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:2px 8px;border-radius:3px;cursor:pointer;font-size:10px}
+.clist{flex:1;overflow-y:auto;padding:4px}
+.cent{background:#161b22;border:1px solid #30363d;border-radius:4px;margin-bottom:4px;font-size:11px;overflow:hidden}
+.cent .ch{padding:6px 8px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.cent .ch:hover{background:#1c2128}
+.dir{font-size:9px;padding:1px 4px;border-radius:3px;font-weight:600;text-transform:uppercase}
+.dir.res{background:#3fb95033;color:#3fb950}
+.dir.err{background:#f8514933;color:#f85149}
+.mtd{color:#d2a8ff;font-family:monospace;font-weight:600}
+.dur{color:#8b949e;font-size:10px;margin-left:auto}
+.ts{color:#484f58;font-size:10px;margin-left:6px}
+.cb{display:none;padding:4px 8px 8px;border-top:1px solid #21262d}
+.cb.open{display:block}
+.cb pre{color:#8b949e;font-size:10px;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;background:#0d1117;padding:6px;border-radius:3px;margin-top:4px}
+.cpanel{background:#161b22;border-top:1px solid #30363d;padding:8px 12px;flex-shrink:0}
+.crow{display:flex;gap:4px}
+.crow input,.crow select{background:#0d1117;color:#c9d1d9;border:1px solid #30363d;padding:4px 6px;border-radius:3px;font-size:11px;font-family:monospace}
+.crow input{flex:1}
+.crow button{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:4px 8px;border-radius:3px;cursor:pointer;font-size:11px}
+.crow button:hover{background:#30362d}
+.crow button.send{background:#1f6feb;border-color:#388bfd;color:#fff}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>MCP 调试</h1>
+  <span class="dot" id="dot"></span>
+  <span class="info" id="st">连接中…</span>
+  <span class="info" id="ver" style="color:#d2a8ff"></span>
+  <a id="mcpUrl" class="info" style="color:#58a6ff;text-decoration:none;margin-left:4px" href=""></a>
+  <span class="info" style="margin-left:auto">端口
+    <input id="portIn" type="text" maxlength="5" style="width:54px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;padding:2px 4px;border-radius:3px;font-size:11px;font-family:monospace"/>
+    <button onclick="applyPort()" style="background:#1f6feb;border:1px solid #388bfd;color:#fff;padding:2px 8px;border-radius:3px;cursor:pointer;font-size:11px">应用并重启</button>
+  </span>
+  <span class="info" id="portMsg" style="color:#8b949e"></span>
+</div>
+<div class="sbar" id="sbar">读取状态中…</div>
+<div class="main">
+<div class="left">
+  <div class="imgbox"><img id="img" src="" alt="游戏截图"/></div>
+  <div class="vctrl">
+    <button id="btnPoll" onclick="togglePoll()">开始抓帧</button>
+    <button id="btnGrid" onclick="toggleGrid()">网格</button>
+    <button id="btnSnap" onclick="fetchSS()">截取一帧</button>
+    <span class="info" id="fps">--</span>
+    <span class="info" id="res"></span>
+  </div>
+</div>
+<div class="right">
+  <div class="rhdr">
+    <h2>调用记录</h2>
+    <span id="cc">0</span>
+    <button onclick="clearC()">清空</button>
+  </div>
+  <div class="clist" id="cl"></div>
+  <div class="cpanel"><div class="crow">
+    <select id="sel" onchange="onSel()">
+      <option value="screenshot">screenshot</option>
+      <option value="click">click</option>
+      <option value="inject_click">inject_click</option>
+      <option value="press_key">press_key</option>
+      <option value="type_text">type_text</option>
+      <option value="scroll">scroll</option>
+      <option value="hotkey">hotkey</option>
+      <option value="execute_command">command</option>
+      <option value="get_player_info">player_info</option>
+      <option value="get_world_info">world_info</option>
+      <option value="get_screen_buttons">screen_buttons</option>
+      <option value="spawn_helper">spawn_helper</option>
+      <option value="helper_info">helper_info</option>
+      <option value="helper_goto_player">helper_goto_player</option>
+      <option value="helper_move">helper_move</option>
+      <option value="helper_command">helper_command</option>
+      <option value="get_port">get_port</option>
+      <option value="set_port">set_port</option>
+      <option value="scan_area">scan_area</option>
+      <option value="build_structure">build_structure</option>
+      <option value="compare_structure">compare_structure</option>
+      <option value="get_build_progress">get_build_progress</option>
+      <option value="cancel_build">cancel_build</option>
+      <option value="save_structure">save_structure</option>
+      <option value="place_structure">place_structure</option>
+      <option value="list_structures">list_structures</option>
+    </select>
+    <input id="ex" placeholder='{"x":100,"y":200}'/>
+    <button class="send" onclick="sendC()">发送</button>
+  </div></div>
+</div>
+</div>
+<script>
+var polling=false,iv=null,fc=0,tot=0;
+var showGrid=false;
+var BASE=location.origin;
+var currentES=null;
+var pendingReq=null;
+
+function $(id){return document.getElementById(id)}
+
+function toggleGrid(){
+  showGrid=!showGrid;
+  var b=$('btnGrid');
+  b.className=showGrid?'active':'';
+  fetchSS();
+}
+
+function togglePoll(){
+  polling=!polling;
+  var b=$('btnPoll');
+  if(polling){b.textContent='停止';b.className='active';iv=setInterval(fetchSS,500)}
+  else{b.textContent='开始抓帧';b.className='';clearInterval(iv);iv=null}
+}
+setInterval(function(){$('fps').textContent=Math.round(fc*2)+' fps';fc=0},1000);
+
+function fetchSS(){
+  if(pendingReq){pendingReq.abort();pendingReq=null}
+  var t0=performance.now();
+  var x=new XMLHttpRequest();
+  pendingReq=x;
+  x.open('GET',BASE+'/api/screenshot',true);
+  x.responseType='json';
+  x.onload=function(){
+    pendingReq=null;
+    if(x.status!==200)return;
+    var d=x.response;
+    if(!d||!d.original)return;
+    var img=$('img');
+    img.src=showGrid&&d.grid?d.grid:d.original;
+    fc++;
+    $('res').textContent=d.width+'x'+d.height+' '+(performance.now()-t0).toFixed(0)+'ms';
+  };
+  x.onerror=function(){pendingReq=null};
+  x.send();
+}
+
+var callCache=new WeakMap();
+var callCount=0;
+var MAX_CALLS=100;
+
+function addC(e){
+  if(!e.timestamp)e.timestamp=Date.now();
+  tot++;$('cc').textContent=tot;
+  var cl=$('cl');
+  while(cl.children.length>=MAX_CALLS)cl.removeChild(cl.lastChild);
+  var d=document.createElement('div');d.className='cent';
+  var cls=e.error?'err':'res';
+  var dur=e.duration_ms>0?e.duration_ms+'ms':'';
+  var ts=e.timestamp?new Date(e.timestamp).toISOString().split('T')[1].split('.')[0]:'';
+  var err=e.error?' <span style="color:#f85149">'+esc(e.error.substring(0,80))+'</span>':'';
+  var res='';
+  if(e.result!=null){
+    var s=typeof e.result==='string'?e.result:JSON.stringify(e.result);
+    if(s.length>200)s=s.substring(0,200);
+    res='<pre>'+esc(s)+'</pre>';
+  }
+  d.innerHTML='<div class="ch" onclick="this.nextElementSibling.classList.toggle(\'open\')">'
+    +'<span class="dir '+cls+'">'+esc(e.direction||'?')+'</span>'
+    +'<span class="mtd">'+esc(e.method||'?')+'</span>'
+    +err+'<span class="dur">'+dur+'</span><span class="ts">'+ts+'</span>'
+    +'</div><div class="cb">'+res+'</div>';
+  cl.prepend(d);
+}
+function clearC(){$('cl').innerHTML='';tot=0;$('cc').textContent='0'}
+
+function fetchCalls(){
+  var x=new XMLHttpRequest();
+  x.open('GET',BASE+'/api/calls',true);
+  x.responseType='json';
+  x.onload=function(){
+    if(x.status!==200)return;
+    var arr=x.response;
+    if(!Array.isArray(arr))return;
+    $('cl').innerHTML='';tot=0;
+    for(var i=0;i<arr.length;i++)addC(arr[i]);
+  };
+  x.send();
+}
+var escDiv=document.createElement('div');
+function esc(s){escDiv.textContent=s;return escDiv.innerHTML}
+
+function onSel(){
+  var v=$('sel').value;
+  var h={click:'{"x":100,"y":200}',inject_click:'{"x":100,"y":200}',press_key:'{"key":"enter"}',type_text:'{"text":"hello"}',scroll:'{"clicks":3}',hotkey:'{"keys":"ctrl+a"}',execute_command:'{"command":"/time set day"}',helper_move:'{"dx":1,"dy":0,"dz":0}',helper_command:'{"command":"/give @s diamond 1"}',set_port:'{"port":9876}'};
+  $('ex').placeholder=h[v]||'';
+}
+
+function sendC(){
+  var cmd=$('sel').value;
+  var ex={};try{ex=JSON.parse($('ex').value||'{}')}catch(e){}
+  var body={cmd:cmd};
+  for(var k in ex)body[k]=ex[k];
+  var t0=performance.now();
+  var x=new XMLHttpRequest();
+  x.open('POST',BASE+'/api/cmd',true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.onload=function(){
+    var ms=Math.round(performance.now()-t0);
+    addC({timestamp:Date.now(),direction:'response',method:cmd,result:x.responseText,error:x.status>=400?x.responseText:null,duration_ms:ms});
+  };
+  x.onerror=function(){
+    addC({timestamp:Date.now(),direction:'response',method:cmd,error:'网络错误',duration_ms:Math.round(performance.now()-t0)});
+  };
+  x.send(JSON.stringify(body));
+}
+
+function connectSSE(){
+  if(currentES){currentES.close();currentES=null}
+  var url=BASE.replace(/^http:/,'');
+  var link=$('mcpUrl');
+  link.textContent=url;
+  link.href=BASE;
+  link.target='_blank';
+  var es=new EventSource(BASE+'/api/events');
+  currentES=es;
+  es.onopen=function(){$('dot').className='dot';$('st').textContent='已连接';};
+  es.onmessage=function(ev){try{addC(JSON.parse(ev.data))}catch(e){}};
+  es.onerror=function(){
+    $('dot').className='dot off';
+    $('st').textContent='重连中…';
+    es.close();
+    if(currentES===es)currentES=null;
+    setTimeout(connectSSE,3000);
+  };
+}
+
+onSel();
+fetchSS();
+fetchCalls();
+connectSSE();
+fetchStatus();
+
+function fetchStatus(){
+  var x=new XMLHttpRequest();
+  x.open('GET',BASE+'/api/status',true);
+  x.responseType='json';
+  x.onload=function(){
+    if(x.status!==200)return;
+    var d=x.response;
+    if(!d)return;
+    var parts=[];
+    if(d.version)parts.push(d.version);
+    if(d.loader)parts.push(d.loader);
+    if(d.forgeVersion)parts.push(d.forgeVersion);
+    if(parts.length)$('ver').textContent=parts.join(' · ');
+    if(d.port&&!$('portIn').value)$('portIn').value=d.port;
+    if(d.port)$('portMsg').textContent='当前 '+d.port;
+    renderStatus(d);
+  };
+  x.send();
+}
+
+// 「可用性」与「Take Over 控制模式」分开显示：MCP / Helper / 结构与预制接口
+// 的可用性不随 control_mode 变化；control_mode 只表示 AI 是否已接管鼠标/视角。
+function avail(v){
+  if(v===true)return ['good','可用'];
+  if(v===false)return ['bad','不可用'];
+  return ['', '未知'];
+}
+function renderStatus(d){
+  var s=$('sbar');
+  if(!s)return;
+  var m=avail(d.mcp_available),h=avail(d.helper_available),st=avail(d.structure_available);
+  var cells=[
+    '<span class="sitem">MCP <b class="'+m[0]+'">'+m[1]+'</b></span>',
+    '<span class="sitem">Helper <b class="'+h[0]+'">'+h[1]+'</b></span>',
+    '<span class="sitem">结构与预制 <b class="'+st[0]+'">'+st[1]+'</b></span>',
+    '<span class="sitem">Take Over <b class="'+(d.control_mode?'on':'')+'">'+(d.control_mode?'已接管':'未接管')+'</b></span>'
+  ];
+  // Structure Selector：只读快照，没有选区时不显示。
+  if(d.selection){
+    var sel=d.selection;
+    var pts=(typeof sel.points==='number'?sel.points:0);
+    var p1=sel.pos1?sel.pos1.join(', '):'—';
+    var p2=sel.pos2?sel.pos2.join(', '):'—';
+    var sz=sel.size?(sel.size.join(' × ')+' / '+sel.volume):'未完成';
+    var tip='维度 '+String(sel.dimension||'')+' · 边界点 '+pts+(sel.can_undo?' · 可撤销':'');
+    cells.push('<span class="sitem" title="'+esc(tip)+'">Selection <b class="'+(sel.valid?'good':'')+'">'
+      +esc(p1+' → '+p2+' · '+sz)+'</b></span>');
+  }
+  s.innerHTML=cells.join('');
+}
+setInterval(fetchStatus,3000);
+
+// 把端口写回 config/mcpmod.properties 并热重启 HTTP 服务，随后跳转到新端口。
+function applyPort(){
+  var v=parseInt($('portIn').value,10);
+  var msg=$('portMsg');
+  if(!(v>0&&v<=65535)){msg.textContent='端口无效（1-65535）';msg.style.color='#f85149';return}
+  msg.textContent='正在切到 '+v+' …';msg.style.color='#d29922';
+  var x=new XMLHttpRequest();
+  x.open('POST',BASE+'/api/cmd',true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.onload=function(){
+    var ok=false;
+    try{ok=JSON.parse(x.responseText).ok===true}catch(e){}
+    if(ok){
+      msg.textContent='已切到 '+v+'，正在跳转…';msg.style.color='#3fb950';
+      setTimeout(function(){location.href=location.protocol+'//'+location.hostname+':'+v+'/debug'},1200);
+    }else{
+      msg.textContent='切换失败：'+x.responseText;msg.style.color='#f85149';
+    }
+  };
+  x.onerror=function(){msg.textContent='网络错误';msg.style.color='#f85149'};
+  x.send(JSON.stringify({cmd:'set_port',port:v}));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+
+[[mods]]
+modId="mcpmod"
+version="1.0"
+displayName="MCP-HELPER"
+logoFile="logo.png"
+description="HTTP/SSE bridge for AI agent interaction"
+authors="Nostzephert"
+credits="Based on MCP-HELPER by langyo; original license notices retained."
+
+[mods.description_localized]
+en_us = "HTTP/SSE bridge for AI agent interaction"
+zh_cn = "Minecraft AI 代理 HTTP/SSE 桥接模组"
+zh_tw = "Minecraft AI 代理 HTTP/SSE 橋接模組"
+ja_jp = "Minecraft AIエージェント用 HTTP/SSE ブリッジMOD"
+ko_kr = "Minecraft AI 에이전트용 HTTP/SSE 브리지 모드"
+fr_fr = "Pont HTTP/SSE pour agents IA Minecraft"
+es_es = "Puente HTTP/SSE para agentes de IA de Minecraft"
+ru_ru = "HTTP/SSE-мост для AI-агентов Minecraft"
+
