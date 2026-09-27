@@ -433,6 +433,10 @@ src/main/resources/
 
 ---
 
+## 配套 Codex Skills
+
+[Minecraft Agent Skills](https://github.com/Roxio-sketch/minecraft-agent-skills) 提供 AXO 实例启动与 Minecraft Photon 特效自动化 skills，可通过兼容构建与 MCP-HELPER 联动。Photon 操作属于构建相关的扩展能力；使用前请确认实际安装版本支持。
+
 ## 工作原理
 
 <details>

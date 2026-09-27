@@ -433,6 +433,10 @@ Selection state is **server-authoritative and per-player**: each player only eve
 
 ---
 
+## Companion Codex Skills
+
+See [Minecraft Agent Skills](https://github.com/Roxio-sketch/minecraft-agent-skills) for Codex skills that can launch Axolotl instances and automate Minecraft Photon VFX workflows through compatible MCP-HELPER builds. Photon operations are build-specific; check the installed build before using them.
+
 ## How It Works
 
 <details>
