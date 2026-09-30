@@ -55,6 +55,10 @@ The mod needs a **world loaded** (singleplayer or a hosted LAN world) for the wo
 
 ## Quick Start
 
+### AI Skill
+
+Use [minecraft-mcp-helper](skills/minecraft-mcp-helper/SKILL.md) for independent AI LAN participation, verified debug URLs, player control protection, building workflows and structure selector operations. Copy its folder into your agent's skills directory; invoke `$minecraft-mcp-helper`. A FakePlayer helper is distinct from a separate LAN client.
+
 1. **Launch Minecraft** with the mod installed. The mod starts its HTTP server automatically (port 9876 when available; see [Port configuration](#port-configuration)).
 2. **Open the status screen** with **F9** (rebindable in *Options → Controls*). It shows the local/HTTP URL, port, LAN addresses, SSE client count, control mode, and MCP-HELPER status.
 3. **Connect your AI agent** to the server:

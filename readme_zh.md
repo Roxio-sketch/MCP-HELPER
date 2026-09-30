@@ -21,6 +21,10 @@
 
 ## 什么是 MCP-HELPER
 
+### AI 操作 Skill
+
+配套 [minecraft-mcp-helper](skills/minecraft-mcp-helper/SKILL.md) 覆盖独立 AI 局域网入世、实际 debug 地址、玩家操作保护、建筑任务、结构库和结构选择器。将整个目录安装到代理的 skills 目录后，使用 `$minecraft-mcp-helper` 调用。FakePlayer 辅助玩家与独立 LAN 客户端是不同能力。
+
 MCP-HELPER 是一款面向 **AI 辅助的 Minecraft 操控与模组开发** 的 **Forge 1.20.1** 模组。游戏加载后，它会在 Minecraft 内部启动一个 HTTP 服务器，并通过一套简化的 MCP 风格协议把游戏能力暴露出去。AI 代理可以查看画面、点击界面、发送按键、查询玩家与世界状态，还能执行批量世界编辑任务——全程无需在代理侧编写特定版本的代码。
 
 > 专为模组开发者和 AI 代理打造：验证 GUI 行为、测试方块/物品、抓取截图、自动化重复性工作流。
